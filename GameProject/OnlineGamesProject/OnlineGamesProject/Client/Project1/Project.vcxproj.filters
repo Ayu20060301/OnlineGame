@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source">
+      <UniqueIdentifier>{063f4ceb-d950-4ab4-aed1-cc4d5f660b8e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Network">
+      <UniqueIdentifier>{ea7c322b-dd57-480f-8043-fb8e749c4c8a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Input">
+      <UniqueIdentifier>{17f9cb59-6912-4f2c-aa02-47c87aa769eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\GameApp">
+      <UniqueIdentifier>{29ef8741-ad51-474c-91a4-b5cb472fd0ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Singleton">
+      <UniqueIdentifier>{cee60a65-8b43-4080-bab3-c591e1113f87}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\GameSetting">
+      <UniqueIdentifier>{5f1d5c03-1af0-464f-b801-760d015aca2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\BG">
+      <UniqueIdentifier>{cc75dfe5-7039-4656-af76-cc475e3082f6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Main.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Network\Client.cpp">
+      <Filter>Source\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Input\InputString.cpp">
+      <Filter>Source\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Input\Input.cpp">
+      <Filter>Source\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GameApp\GameApp.cpp">
+      <Filter>Source\GameApp</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\BG\BackGround.cpp">
+      <Filter>Source\BG</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Network\NetworkCommonParam.h">
+      <Filter>Source\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Network\Client.h">
+      <Filter>Source\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputString.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\Input.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GameApp\GameApp.h">
+      <Filter>Source\GameApp</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Singleton\Singleton.h">
+      <Filter>Source\Singleton</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GameSetting\GameSetting.h">
+      <Filter>Source\GameSetting</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\BG\BackGround.h">
+      <Filter>Source\BG</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
