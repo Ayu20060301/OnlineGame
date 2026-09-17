@@ -4,12 +4,10 @@
 #include "NetworkCommonParam.h"
 #include "../Input/InputString.h"
 
-
 Client::Client()
 {
 	m_ServerHandle = 0;
 
-	// 初期状態
 	m_NWState = NW_STATE_NAME_INPUT;
 
 	m_IPAddress = {};
@@ -25,17 +23,19 @@ Client::Client()
 
 	m_LoadingAngle = 0.0f;
 
-	// ターン
 	m_TurnPlayerID = 0;
 	m_TurnPlayerName[0] = '\0';
 
-	// 最初の文字
 	m_StartChar[0] = '\0';
 
-	// 結果メッセージ
 	m_ResultMessage[0] = '\0';
 
+	m_MyName[0] = '\0';
+
 	m_PlayerCount = 0;
+
+	m_FirstPlayerName[0] = '\0';
+	m_SecondPlayerName[0] = '\0';
 }
 
 
@@ -51,20 +51,15 @@ Client::~Client()
 void Client::Init()
 {
 	m_UserNameInput = new InputString;
+
 	m_MessageInput = new InputString;
 
-	m_UserNameInput->SetPos(
-		VGet(5.0f, 35.0f, 0.0f)
-	);
+	m_UserNameInput->SetPos(VGet(5.0f,55.0f,0.0f));
 
-	m_MessageInput->SetPos(
-		VGet(0.0f, 20.0f, 0.0f)
-	);
+	m_MessageInput->SetPos(VGet(70.0f,740.0f,0.0f));
 
-	// 名前入力開始
 	m_UserNameInput->Start();
 }
-
 
 /// <summary>
 /// 更新
@@ -76,90 +71,96 @@ void Client::Update()
 	case NW_STATE_NAME_INPUT:
 		UpdateNameInput();
 		break;
-
 	case NW_STATE_WAITING_CONNECTION:
 		UpdateWaitingConnection();
 		break;
-
 	case NW_STATE_MESSAGE_INPUT:
 		UpdateMessageInput();
 		break;
-
 	case NW_STATE_CONNECTION_FAILED:
-
 		if (Input::IsTriggerKey(KEY_ENTER))
 		{
 			m_NWState = NW_STATE_NAME_INPUT;
 
 			m_UserNameInput->Start();
 		}
-
 		break;
 	}
 }
-
 
 /// <summary>
 /// 描画
 /// </summary>
 void Client::Draw()
 {
+
+	//入力した名前を右上に追加
+	if (strlen(m_MyName) > 0)
+	{
+		DrawFormatString(1350,20,GetColor(255, 255, 255),"名前 : %s",m_MyName);
+	}
+
+	//==================================================
+	// 先行・後行
+	//==================================================
+
+	if (strlen(m_FirstPlayerName) > 0)
+	{
+		DrawFormatString(1200,60,GetColor(255, 255, 0),"先行 : %s",m_FirstPlayerName);
+	}
+
+	if (strlen(m_SecondPlayerName) > 0)
+	{
+		DrawFormatString(1200,90,GetColor(100, 200, 255),"後行 : %s",m_SecondPlayerName);
+	}
+
+
 	//==================================================
 	// 名前入力
 	//==================================================
+
 	if (m_NWState == NW_STATE_NAME_INPUT)
 	{
-		DrawFormatString(
-			0,
-			0,
-			GetColor(255, 255, 255),
-			"名前を入力"
-		);
+		DrawFormatString(0,0,GetColor(255, 255, 255),"名前を入力");
+
+
+		DrawBox(0,50,600,100,GetColor(50, 50, 50),TRUE);
+
+		DrawBox(0,50,600,100,GetColor(255, 255, 255),FALSE);
+
+		m_UserNameInput->Draw();
+
+		// 名前重複などのエラー
+		if (strlen(m_ResultMessage) > 0)
+		{
+			DrawFormatString(0,120,GetColor(255, 100, 100),"%s",m_ResultMessage);
+		}
 	}
 
 	//==================================================
 	// 接続失敗
 	//==================================================
+
 	else if (m_NWState == NW_STATE_CONNECTION_FAILED)
 	{
-		DrawFormatString(
-			650,
-			400,
-			GetColor(255, 255, 255),
-			"接続に失敗しました"
-		);
+		m_MyName[0] = '\0';
 
-		DrawFormatString(
-			650,
-			480,
-			GetColor(255, 255, 255),
-			"Enterでもどる"
-		);
+		DrawFormatString(650,400,GetColor(255, 255, 255),"接続に失敗しました");
+
+		DrawFormatString(650,480,GetColor(255, 255, 255),"Enterでもどる");
 	}
 
 	//==================================================
-	// しりとり画面
+	// しりとり
 	//==================================================
-	else if (m_NWState == NW_STATE_MESSAGE_INPUT)
+	else if (m_NWState ==NW_STATE_MESSAGE_INPUT)
 	{
 		DrawShiritori();
+
 		DrawChat();
-	}
 
-	//==================================================
-	// 名前入力欄
-	//==================================================
-	if (m_NWState == NW_STATE_NAME_INPUT)
-	{
-		m_UserNameInput->Draw();
-	}
 
-	//==================================================
-	// 単語入力欄
-	//==================================================
-	else if (m_NWState == NW_STATE_MESSAGE_INPUT)
-	{
-		// ゲーム開始後だけ入力欄を表示
+		// ゲーム開始後だけ入力欄
 		if (strlen(m_StartChar) > 0)
 		{
 			m_MessageInput->Draw();
@@ -178,8 +179,10 @@ void Client::Fin()
 		Disconnect();
 	}
 
+
 	delete m_UserNameInput;
 	m_UserNameInput = nullptr;
+
 
 	delete m_MessageInput;
 	m_MessageInput = nullptr;
@@ -191,25 +194,17 @@ void Client::Fin()
 /// </summary>
 void Client::Connect()
 {
-	m_ServerHandle =
-		ConnectNetWork(
-			m_IPAddress,
-			PORT_NUMBER
-		);
+	m_ServerHandle =ConnectNetWork(m_IPAddress,PORT_NUMBER);
 
-	// 接続失敗
 	if (m_ServerHandle == -1)
 	{
-		m_NWState =
-			NW_STATE_CONNECTION_FAILED;
+		m_NWState = NW_STATE_CONNECTION_FAILED;
 	}
 	else
 	{
-		m_NWState =
-			NW_STATE_WAITING_CONNECTION;
+		m_NWState = NW_STATE_WAITING_CONNECTION;
 	}
 }
-
 
 /// <summary>
 /// 切断
@@ -225,19 +220,19 @@ void Client::Disconnect()
 
 	m_NWState = NW_STATE_NAME_INPUT;
 
-	// メッセージ入力終了
+
 	if (m_MessageInput != nullptr)
 	{
 		m_MessageInput->Fin();
 	}
 
-	// 名前入力開始
+
 	if (m_UserNameInput != nullptr)
 	{
 		m_UserNameInput->Start();
 	}
 
-	// データクリア
+
 	m_SendChatData = {};
 	m_SendShiritoriData = {};
 
@@ -247,9 +242,11 @@ void Client::Disconnect()
 
 	m_TurnPlayerID = 0;
 
+	m_TurnPlayerName[0] = '\0';
+
 	m_PlayerCount = 0;
 
-	m_TurnPlayerName[0] = '\0';
+	m_MyName[0] = '\0';
 
 	m_WordList.clear();
 
@@ -264,36 +261,40 @@ void Client::UpdateNameInput()
 {
 	m_UserNameInput->Update();
 
-	// Enter
+
 	if (Input::IsTriggerKey(KEY_ENTER))
 	{
-		const char* name =
-			m_UserNameInput->GetInputString();
+		const char* name = m_UserNameInput->GetInputString();
 
-		int nameLen =
-			(int)strlen(name);
+
+		int nameLen = static_cast<int>(strlen(name));
 
 		if (nameLen > 0)
 		{
-			// 名前保存
-			strcpy_s(
-				m_SendChatData.name,
-				NETWORK_USER_NAME_BUFFER_MAX,
-				name
-			);
+			//エラー表示を消す
+			m_ResultMessage[0] = '\0';
 
-			// メッセージは空
+			//==================================================
+			// 名前設定
+			//==================================================
+
+			strcpy_s(m_SendChatData.name,NETWORK_USER_NAME_BUFFER_MAX,name);
+
+			strcpy_s(m_MyName,NETWORK_USER_NAME_BUFFER_MAX,name);
+
 			m_SendChatData.message[0] = '\0';
 
-			// 入力終了
+
 			m_UserNameInput->Fin();
 
+			//==================================================
 			// 接続
+			//==================================================
+
 			Connect();
 		}
 	}
 }
-
 
 /// <summary>
 /// 接続待機
@@ -302,23 +303,38 @@ void Client::UpdateWaitingConnection()
 {
 	if (GetNetWorkAcceptState(m_ServerHandle))
 	{
-		// しりとり画面へ
-		m_NWState =
-			NW_STATE_MESSAGE_INPUT;
+		m_NWState = NW_STATE_MESSAGE_INPUT;
 
-		// メッセージ入力開始
+
+		//==================================================
+		// 名前を送信
+		//==================================================
+
+		PacketHeader header = {};
+
+		header.type = Network::PACKET_CLIENT_CHAT;
+
+		header.dataSize = sizeof(ChatData);
+
+
+		NetWorkSend(m_ServerHandle,&header,sizeof(header));
+
+
+		NetWorkSend(m_ServerHandle,&m_SendChatData,sizeof(m_SendChatData)
+	);
+
+
+		//==================================================
+		// 入力開始
+		//==================================================
+
 		m_MessageInput->Start();
 
-		//==================================================
-		// 名前をサーバーへ送信
-		//==================================================
-		NetWorkSend(
-			m_ServerHandle,
-			&m_SendChatData,
-			sizeof(m_SendChatData)
-		);
 
+		//==================================================
 		// サーバーから受信
+		//==================================================
+
 		ReceiveData();
 	}
 }
@@ -329,15 +345,19 @@ void Client::UpdateWaitingConnection()
 /// </summary>
 void Client::UpdateMessageInput()
 {
+	//==================================================
 	// サーバーから受信
+	//==================================================
+
 	ReceiveData();
+
 
 	//==================================================
 	// ゲーム開始前
 	//==================================================
+
 	if (strlen(m_StartChar) == 0)
 	{
-		// Escで切断
 		if (Input::IsTriggerKey(KEY_ESCAPE))
 		{
 			Disconnect();
@@ -346,56 +366,60 @@ void Client::UpdateMessageInput()
 		return;
 	}
 
+
 	//==================================================
 	// ゲーム開始後
 	//==================================================
 
+
 	m_MessageInput->Update();
 
-	// Enter
+
 	if (Input::IsTriggerKey(KEY_ENTER))
 	{
-		const char* word =
-			m_MessageInput->GetInputString();
+		const char* word = m_MessageInput->GetInputString();
 
-		int messageLen =
-			(int)strlen(word);
+		int messageLen =static_cast<int>(strlen(word));
 
 		if (messageLen > 0)
 		{
-			// 結果メッセージクリア
 			m_ResultMessage[0] = '\0';
 
-			// データ初期化
+
 			m_SendShiritoriData = {};
 
-			// 通信タイプ
-			m_SendShiritoriData.type =
-				Network::SHIRITORI_WORD;
 
-			// プレイヤーIDはサーバー側で設定
+			m_SendShiritoriData.type = Network::SHIRITORI_WORD;
+
+
 			m_SendShiritoriData.playerID = 0;
 
-			// 単語
-			strcpy_s(
-				m_SendShiritoriData.word,
-				NETWORK_WORD_BUFFER_MAX,
-				word
-			);
 
-			// サーバーへ送信
-			NetWorkSend(
-				m_ServerHandle,
-				&m_SendShiritoriData,
-				sizeof(m_SendShiritoriData)
-			);
+			strcpy_s(m_SendShiritoriData.word,NETWORK_WORD_BUFFER_MAX,word);
 
-			// 入力欄クリア
+			//==================================================
+			// ヘッダー
+			//==================================================
+
+			PacketHeader header = {};
+
+			header.type = Network::PACKET_CLIENT_SHIRITORI;
+
+			header.dataSize = sizeof(ShiritoriData);
+
+			NetWorkSend(m_ServerHandle,&header,sizeof(header));
+
+			NetWorkSend(m_ServerHandle,&m_SendShiritoriData,sizeof(m_SendShiritoriData));
+
 			m_MessageInput->Clear();
 		}
 	}
 
-	// Escで切断
+
+	//==================================================
+	// Esc
+	//==================================================
+
 	if (Input::IsTriggerKey(KEY_ESCAPE))
 	{
 		Disconnect();
@@ -410,113 +434,167 @@ void Client::ReceiveData()
 {
 	while (true)
 	{
-		int dataLength =
-			GetNetWorkDataLength(m_ServerHandle);
+		int dataLength = GetNetWorkDataLength(m_ServerHandle);
 
-		if (dataLength <= 0)
-		{
-			break;
-		}
+		//==================================================
+		// データなし
+		//==================================================
 
-		printf(
-			"Client Receive : dataLength = %d\n",
-			dataLength
-		);
+		if (dataLength <= 0) break;
+		
+		//==================================================
+		// ヘッダー未満
+		//==================================================
+
+		if (dataLength < sizeof(PacketHeader)) break;
+
+		//==================================================
+		// ヘッダー受信
+		//==================================================
+
+		PacketHeader header = {};
+
+		NetWorkRecv(m_ServerHandle,&header,sizeof(header));
+
+		printf("Client Receive : type = %d, size = %d\n",header.type,header.dataSize);
+
 
 		//==================================================
 		// ServerData
 		//==================================================
-		if (dataLength == sizeof(ServerData))
+
+		if (header.type ==Network::PACKET_SERVER_DATA)
 		{
-			ServerData receiveData = {};
-
-			NetWorkRecv(
-				m_ServerHandle,
-				&receiveData,
-				sizeof(receiveData)
-			);
-
-			// 接続人数
-			m_PlayerCount = receiveData.playerCount;
-
-			// ターンID
-			m_TurnPlayerID = receiveData.turnPlayerID;
-
-			// ターンプレイヤー名
-			m_TurnPlayerName[0] = '\0';
-
-			if (m_TurnPlayerID >= 0 && m_TurnPlayerID < PLAYER_MAX)
+			if (header.dataSize !=sizeof(ServerData))
 			{
-				strcpy_s(
-					m_TurnPlayerName,
-					NETWORK_USER_NAME_BUFFER_MAX,
-					receiveData.playerNames[
-						m_TurnPlayerID
-					]
-				);
+				printf("Invalid ServerData size.\n");
+
+				continue;
 			}
 
+			ServerData receiveData = {};
+
+
+			NetWorkRecv(m_ServerHandle,&receiveData,sizeof(receiveData));
+
+			//==================================================
+			// 接続人数
+			//==================================================
+
+			m_PlayerCount = receiveData.playerCount;
+
+
+			//==================================================
+			// ターン
+			//==================================================
+
+			m_TurnPlayerID = receiveData.turnPlayerID;
+
+
+			//==================================================
+			// ターンプレイヤー名
+			//==================================================
+
+			m_TurnPlayerName[0] = '\0';
+
+
+			if (m_TurnPlayerID >= 0 &&m_TurnPlayerID < PLAYER_MAX)
+			{
+				strcpy_s(m_TurnPlayerName,NETWORK_USER_NAME_BUFFER_MAX,receiveData.playerNames[m_TurnPlayerID]);
+			}
+
+			//==================================================
 			// チャットログ
+			//==================================================
+
 			m_ServerChatData.clear();
 
-			for (const ChatData& data :
-				receiveData.chatData)
+
+			for (const ChatData& data :receiveData.chatData)
 			{
 				if (strlen(data.message) > 0)
 				{
 					m_ServerChatData.push_back(data);
 				}
 			}
+
+
+			//==================================================
+			// 2人未満ならゲーム待機状態
+			//==================================================
+
+			if (m_PlayerCount < PLAYER_MAX)
+			{
+				m_StartChar[0] = '\0';
+
+				m_ResultMessage[0] = '\0';
+
+				m_TurnPlayerID = 0;
+
+				m_TurnPlayerName[0] = '\0';
+
+				m_WordList.clear();
+			}
 		}
+
 
 		//==================================================
 		// しりとり開始
 		//==================================================
-		else if (
-			dataLength ==
-			sizeof(ShiritoriStartData)
-			)
+
+		else if (header.type ==Network::PACKET_SHIRITORI_START)
 		{
+			if (header.dataSize !=sizeof(ShiritoriStartData))
+			{
+				printf("Invalid ShiritoriStartData size.\n");
+
+				continue;
+			}
+
+
 			ShiritoriStartData receiveData = {};
 
-			NetWorkRecv(
-				m_ServerHandle,
-				&receiveData,
-				sizeof(receiveData)
-			);
 
-			// 開始文字を保存
-			strcpy_s(
-				m_StartChar,
-				NETWORK_WORD_BUFFER_MAX,
-				receiveData.startChar
-			);
+			NetWorkRecv(m_ServerHandle,&receiveData,sizeof(receiveData));
 
-			printf(
-				"=================================\n"
-			);
 
-			printf(
-				"Shiritori Start : %s\n",
-				m_StartChar
-			);
+			strcpy_s(m_StartChar,NETWORK_WORD_BUFFER_MAX,receiveData.startChar);
 
-			printf(
-				"=================================\n"
-			);
+
+			printf("=================================\n");
+
+			printf("Shiritori Start : %s\n",m_StartChar);
+
+			printf("=================================\n");
 		}
+
 
 		//==================================================
 		// しりとり履歴
 		//==================================================
+
 		else if (
-			dataLength ==
-			sizeof(ShiritoriData) * CHAT_LOG_MAX
+			header.type ==
+			Network::PACKET_SHIRITORI_HISTORY
 			)
 		{
+			if (
+				header.dataSize !=
+				sizeof(ShiritoriData) * CHAT_LOG_MAX
+				)
+			{
+				printf(
+					"Invalid ShiritoriHistory size.\n"
+				);
+
+				continue;
+			}
+
+
 			ShiritoriData serializedData[
 				CHAT_LOG_MAX
 			] = {};
+
 
 				NetWorkRecv(
 					m_ServerHandle,
@@ -524,27 +602,41 @@ void Client::ReceiveData()
 					sizeof(serializedData)
 				);
 
+
 				m_WordList.clear();
 
-				for (const ShiritoriData& data :
-					serializedData)
+
+				for (
+					const ShiritoriData& data :
+					serializedData
+					)
 				{
 					if (strlen(data.word) > 0)
 					{
-						m_WordList.push_back(data);
+						m_WordList.push_back(
+							data
+						);
 					}
 				}
 		}
 
+
 		//==================================================
 		// しりとり結果
 		//==================================================
-		else if (
-			dataLength ==
-			sizeof(ShiritoriData)
-			)
+
+		else if (header.type ==Network::PACKET_SHIRITORI_DATA)
 		{
+			if (header.dataSize !=sizeof(ShiritoriData))
+			{
+				printf("Invalid ShiritoriData size.\n");
+
+				continue;
+			}
+
+
 			ShiritoriData receiveData = {};
+
 
 			NetWorkRecv(
 				m_ServerHandle,
@@ -552,56 +644,113 @@ void Client::ReceiveData()
 				sizeof(receiveData)
 			);
 
+
+			//==================================================
 			// ターン更新
+			//==================================================
+
 			m_TurnPlayerID =
 				receiveData.turnPlayerID;
+
 
 			//==================================================
 			// 使用済み
 			//==================================================
+
 			if (
 				receiveData.result ==
 				Network::SHIRITORI_ALREADY_USED
 				)
 			{
-				strcpy_s(
-					m_ResultMessage,
-					NETWORK_WORD_BUFFER_MAX,
-					"その単語は既に使われています"
-				);
+				strcpy_s(m_ResultMessage,NETWORK_WORD_BUFFER_MAX,"その単語は既に使われています");
+
+				m_MessageInput->Clear();
+			}
+
+
+			//==================================================
+			// ターン違い
+			//==================================================
+
+			else if (receiveData.result ==Network::SHIRITORI_WRONG_TURN)
+			{
+				strcpy_s(m_ResultMessage,NETWORK_WORD_BUFFER_MAX,"あなたの番ではありません");
 
 				m_MessageInput->Clear();
 			}
 
 			//==================================================
-			// ターン違い
-			//==================================================
-			else if (
-				receiveData.result ==
-				Network::SHIRITORI_WRONG_TURN
-				)
+            // 語尾が違う
+            //==================================================
+
+			else if (receiveData.result ==Network::SHIRITORI_WRONG_START)
 			{
-				strcpy_s(
-					m_ResultMessage,
-					NETWORK_WORD_BUFFER_MAX,
-					"あなたの番ではありません"
-				);
+				strcpy_s(m_ResultMessage,NETWORK_WORD_BUFFER_MAX,"前の単語の最後の文字から始めてください");
 
 				m_MessageInput->Clear();
 			}
 		}
 
+
+
+
 		//==================================================
-		// 不明
+		// 接続結果
 		//==================================================
+
+		else if (header.type ==Network::PACKET_CONNECTION_RESULT)
+		{
+			if (header.dataSize !=sizeof(ConnectionData))
+			{
+				printf("Invalid ConnectionData size.\n");
+
+				continue;
+			}
+
+
+			ConnectionData receiveData = {};
+
+
+			NetWorkRecv(m_ServerHandle,&receiveData,sizeof(receiveData));
+
+
+			if (receiveData.result ==Network::CONNECTION_FULL)
+			{
+				printf("Server is full.\n");
+
+				strcpy_s(m_ResultMessage, NETWORK_WORD_BUFFER_MAX, "サーバーが満員です");;
+			}
+			else if (receiveData.result == Network::CONNECTION_NAME_USED)
+			{
+				printf("Name already used.\n");
+
+				strcpy_s(m_ResultMessage,NETWORK_WORD_BUFFER_MAX,"その名前は既に使われています");
+
+				//名前を再入力できる状態へ戻す
+				m_NWState = NW_STATE_NAME_INPUT;
+
+				m_UserNameInput->Start();
+			}
+		}
+
+		//==================================================
+		// 不明なパケット
+		//==================================================
+
 		else
 		{
-			printf(
-				"Unknown packet size : %d\n",
-				dataLength
-			);
+			printf("Unknown packet type : %d\n",header.type);
 
-			break;
+			// 不明なパケットを読み捨て
+			if (header.dataSize > 0)
+			{
+				char dummy[1024];
+
+				if (header.dataSize <=sizeof(dummy))
+				{
+					NetWorkRecv(m_ServerHandle,dummy,header.dataSize);
+				}
+			}
 		}
 	}
 }
@@ -614,16 +763,10 @@ void Client::DrawChat()
 {
 	int row = 0;
 
-	for (ChatData data : m_ServerChatData)
+
+	for (const ChatData& data :m_ServerChatData)
 	{
-		DrawFormatString(
-			0,
-			40 + row * 20,
-			GetColor(255, 255, 255),
-			"%s: %s",
-			data.name,
-			data.message
-		);
+		DrawFormatString(0,40 + row * 20,GetColor(255, 255, 255),"%s: %s",data.name,data.message);
 
 		row++;
 	}
@@ -635,124 +778,93 @@ void Client::DrawChat()
 /// </summary>
 void Client::DrawShiritori()
 {
-	// 接続人数表示
-	DrawFormatString(
-		0,
-		250,
-		GetColor(255, 255, 255),
-		"接続人数 : %d / %d",
-		m_PlayerCount,
-		PLAYER_MAX
-	);
-
+	//==================================================
 	// ゲーム開始前
+	//==================================================
+
 	if (strlen(m_StartChar) == 0)
 	{
-		DrawFormatString(
-			0,
-			300,
-			GetColor(255, 255, 0),
-			"他のプレイヤーの参加を待っています..."
-		);
+		DrawFormatString(0,250,GetColor(255, 255, 0),"ゲーム開始待ち");
 
-		DrawFormatString(
-			0,
-			340,
-			GetColor(255, 255, 255),
-			"2人以上集まるとゲームが開始されます"
-		);
 
-		DrawFormatString(
-			0,
-			800,
-			GetColor(255, 255, 255),
-			"プレイヤーが揃うまでお待ちください"
-		);
+		DrawFormatString(0,300,GetColor(255, 255, 255),"接続人数 : %d / %d",m_PlayerCount,PLAYER_MAX);
 
-		DrawFormatString(
-			0,
-			840,
-			GetColor(255, 255, 255),
-			"Escキーで切断"
-		);
+
+		DrawFormatString(0,350,GetColor(255, 255, 255),"2人揃うとゲームが開始されます");
+
+
+		DrawFormatString(0,800,GetColor(255, 255, 255),"Escキーで切断");
 
 		return;
-
 	}
+
+
+	//==================================================
+	// ゲーム画面
+	//==================================================
+
+	DrawFormatString(0,0,GetColor(255, 255, 255),"しりとり");
+
+
+	//==================================================
+	// 接続人数
+	//==================================================
+
+	DrawFormatString(0,30,GetColor(255, 255, 255),"接続人数 : %d / %d",m_PlayerCount,PLAYER_MAX);
+
 
 	//==================================================
 	// 最初の文字
 	//==================================================
-	DrawFormatString(
-		0,
-		65,
-		GetColor(0, 255, 255),
-		"最初の文字 : %s",
-		m_StartChar
-	);
+
+	DrawFormatString(0,70,GetColor(0, 255, 255),"最初の文字 : %s",m_StartChar);
 
 	//==================================================
-	// 現在のターン
+	// ターン
 	//==================================================
+
 	if (strlen(m_TurnPlayerName) > 0)
 	{
-		DrawFormatString(
-			0,
-			90,
-			GetColor(255, 255, 0),
-			"%sさんの番です",
-			m_TurnPlayerName
-		);
+		DrawFormatString(0,100,GetColor(255, 255, 0),"%sさんの番です",m_TurnPlayerName);
 	}
 
-	//==================================================
-	// しりとり履歴
-	//==================================================
-	int y = 125;
 
-	for (const ShiritoriData& data :
-		m_WordList)
+	//==================================================
+	// 履歴
+	//==================================================
+
+	int y = 150;
+
+
+	for (const ShiritoriData& data :m_WordList)
 	{
-		DrawFormatString(
-			0,
-			y,
-			GetColor(255, 255, 255),
-			"%s : %s",
-			data.name,
-			data.word
-		);
+		DrawFormatString(0,y,GetColor(255, 255, 255),"%s : %s",data.name,data.word);
 
 		y += 30;
 	}
 
+
 	//==================================================
-	// 結果メッセージ
+	// 結果
 	//==================================================
+
 	if (strlen(m_ResultMessage) > 0)
 	{
-		DrawFormatString(
-			0,
-			770,
-			GetColor(255, 100, 100),
-			"%s",
-			m_ResultMessage
-		);
+		DrawFormatString(0,770,GetColor(255, 100, 100),"%s",m_ResultMessage);
 	}
 
-	//==================================================
-	// 入力案内
-	//==================================================
-	DrawFormatString(
-		0,
-		800,
-		GetColor(255, 255, 255),
-		"単語を入力してEnter"
-	);
 
-	DrawFormatString(
-		0,
-		840,
-		GetColor(255, 255, 255),
-		"Escキーで切断"
-	);
+//==================================================
+// 入力エリア
+//==================================================
+
+	DrawFormatString(50,650,GetColor(255, 255, 255),"入力");
+
+	DrawBox(50,730,1000,780,GetColor(50, 50, 50),TRUE);
+
+	DrawBox(50,730,1000,780,GetColor(255, 255, 255),FALSE);
+
+	DrawFormatString(1020,745,GetColor(255, 255, 255),"Enter : 決定");
+
+	DrawFormatString(50,820,GetColor(255, 255, 255),"Escキーで切断");
 }

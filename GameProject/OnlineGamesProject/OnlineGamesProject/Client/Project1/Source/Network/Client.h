@@ -32,10 +32,7 @@ public:
 	void Connect();
 	void Disconnect();
 
-	void SetIPAddress(IPDATA address)
-	{
-		m_IPAddress = address;
-	}
+	void SetIPAddress(IPDATA address){m_IPAddress = address;}
 
 private:
 
@@ -50,7 +47,6 @@ private:
 	// 描画
 	void DrawChat();
 	void DrawShiritori();
-
 
 private:
 
@@ -94,6 +90,11 @@ private:
 	// 結果メッセージ
 	char m_ResultMessage[NETWORK_WORD_BUFFER_MAX];
 
+	char m_MyName[NETWORK_USER_NAME_BUFFER_MAX];
+
 	//接続人数
 	int m_PlayerCount;
+
+	char m_FirstPlayerName[NETWORK_USER_NAME_BUFFER_MAX];
+	char m_SecondPlayerName[NETWORK_USER_NAME_BUFFER_MAX];
 };

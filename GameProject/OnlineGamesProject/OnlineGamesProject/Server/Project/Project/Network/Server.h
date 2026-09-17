@@ -29,6 +29,9 @@ private:
 	void AddUserData(int handle);
 	void RemoveUserData(int handle);
 
+	// 空いているプレイヤーIDを取得
+	int GetFreePlayerID();
+
 	// 受信処理
 	void ReceiveData();
 
@@ -62,4 +65,9 @@ private:
 
 	// ゲーム開始済みか
 	bool m_IsGameStarted;
+
+	bool IsNameUsed(const char* name);
+
+	bool IsCorrectStartChar(const char* word);
+
 };
