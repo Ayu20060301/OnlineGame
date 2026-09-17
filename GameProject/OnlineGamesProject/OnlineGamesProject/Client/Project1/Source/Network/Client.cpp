@@ -3,6 +3,8 @@
 #include "Client.h"
 #include "NetworkCommonParam.h"
 #include "../Input/InputString.h"
+#include "../GameSetting/GameSetting.h"
+#include <string>
 
 Client::Client()
 {
@@ -93,7 +95,6 @@ void Client::Update()
 /// </summary>
 void Client::Draw()
 {
-
 	//入力した名前を右上に追加
 	if (strlen(m_MyName) > 0)
 	{
@@ -101,27 +102,12 @@ void Client::Draw()
 	}
 
 	//==================================================
-	// 先行・後行
-	//==================================================
-
-	if (strlen(m_FirstPlayerName) > 0)
-	{
-		DrawFormatString(1200,60,GetColor(255, 255, 0),"先行 : %s",m_FirstPlayerName);
-	}
-
-	if (strlen(m_SecondPlayerName) > 0)
-	{
-		DrawFormatString(1200,90,GetColor(100, 200, 255),"後行 : %s",m_SecondPlayerName);
-	}
-
-
-	//==================================================
 	// 名前入力
 	//==================================================
 
 	if (m_NWState == NW_STATE_NAME_INPUT)
 	{
-		DrawFormatString(0,0,GetColor(255, 255, 255),"名前を入力");
+		DrawFormatString(0,0,GetColor(255, 255, 255),"名前を入力してください");
 
 
 		DrawBox(0,50,600,100,GetColor(50, 50, 50),TRUE);
@@ -159,11 +145,10 @@ void Client::Draw()
 
 		DrawChat();
 
-
 		// ゲーム開始後だけ入力欄
 		if (strlen(m_StartChar) > 0)
 		{
-			m_MessageInput->Draw();
+			DrawShiritori();
 		}
 	}
 }
@@ -371,6 +356,24 @@ void Client::UpdateMessageInput()
 	// ゲーム開始後
 	//==================================================
 
+	//==================================================
+// ゲーム開始後
+//==================================================
+
+// 自分のターンか確認
+	bool isMyTurn = strcmp(m_TurnPlayerName, m_MyName) == 0;
+
+	// 相手のターンなら入力しない
+	if (!isMyTurn)
+	{
+		if (Input::IsTriggerKey(KEY_ESCAPE))
+		{
+			Disconnect();
+		}
+
+		return;
+	}
+
 
 	m_MessageInput->Update();
 
@@ -491,6 +494,13 @@ void Client::ReceiveData()
 			m_TurnPlayerID = receiveData.turnPlayerID;
 
 
+            // 1Pの名前
+			strcpy_s(m_FirstPlayerName,NETWORK_USER_NAME_BUFFER_MAX,receiveData.playerNames[0]);
+
+			// 2Pの名前
+			strcpy_s(m_SecondPlayerName,NETWORK_USER_NAME_BUFFER_MAX,receiveData.playerNames[1]);
+
+
 			//==================================================
 			// ターンプレイヤー名
 			//==================================================
@@ -573,49 +583,28 @@ void Client::ReceiveData()
 		// しりとり履歴
 		//==================================================
 
-		else if (
-			header.type ==
-			Network::PACKET_SHIRITORI_HISTORY
-			)
+		else if (header.type ==Network::PACKET_SHIRITORI_HISTORY)
 		{
-			if (
-				header.dataSize !=
-				sizeof(ShiritoriData) * CHAT_LOG_MAX
-				)
+			if (header.dataSize !=sizeof(ShiritoriData) * CHAT_LOG_MAX)
 			{
-				printf(
-					"Invalid ShiritoriHistory size.\n"
-				);
+				printf("Invalid ShiritoriHistory size.\n");
 
 				continue;
 			}
 
 
-			ShiritoriData serializedData[
-				CHAT_LOG_MAX
-			] = {};
+			ShiritoriData serializedData[CHAT_LOG_MAX] = {};
 
 
-				NetWorkRecv(
-					m_ServerHandle,
-					serializedData,
-					sizeof(serializedData)
-				);
-
+				NetWorkRecv(m_ServerHandle,serializedData,sizeof(serializedData));
 
 				m_WordList.clear();
 
-
-				for (
-					const ShiritoriData& data :
-					serializedData
-					)
+				for (const ShiritoriData& data :serializedData)
 				{
 					if (strlen(data.word) > 0)
 					{
-						m_WordList.push_back(
-							data
-						);
+						m_WordList.push_back(data);
 					}
 				}
 		}
@@ -638,32 +627,23 @@ void Client::ReceiveData()
 			ShiritoriData receiveData = {};
 
 
-			NetWorkRecv(
-				m_ServerHandle,
-				&receiveData,
-				sizeof(receiveData)
-			);
+			NetWorkRecv(m_ServerHandle,&receiveData,sizeof(receiveData));
 
 
 			//==================================================
 			// ターン更新
 			//==================================================
 
-			m_TurnPlayerID =
-				receiveData.turnPlayerID;
+			m_TurnPlayerID = receiveData.turnPlayerID;
 
 
 			//==================================================
 			// 使用済み
 			//==================================================
 
-			if (
-				receiveData.result ==
-				Network::SHIRITORI_ALREADY_USED
-				)
+			if (receiveData.result == Network::SHIRITORI_ALREADY_USED)
 			{
 				strcpy_s(m_ResultMessage,NETWORK_WORD_BUFFER_MAX,"その単語は既に使われています");
-
 				m_MessageInput->Clear();
 			}
 
@@ -778,6 +758,21 @@ void Client::DrawChat()
 /// </summary>
 void Client::DrawShiritori()
 {
+
+	//画面サイズ
+	const int screenWidth = 1600;
+	const int screenHeight = 900;
+
+	//==================================================
+	// 色
+	//==================================================
+	const unsigned int white = GetColor(255, 255, 255);
+	const unsigned int black = GetColor(0, 0, 0);
+	const unsigned int gray = GetColor(235, 240, 245);
+	const unsigned int blue = GetColor(70, 140, 220);
+	const unsigned int darkGray = GetColor(100, 100, 100);
+
+
 	//==================================================
 	// ゲーム開始前
 	//==================================================
@@ -799,72 +794,151 @@ void Client::DrawShiritori()
 	}
 
 
-	//==================================================
-	// ゲーム画面
-	//==================================================
+	// =========================================================
+	// 相手
+	// =========================================================
 
-	DrawFormatString(0,0,GetColor(255, 255, 255),"しりとり");
+	DrawBox(30, 30,500, 120,white,TRUE);
 
+	// =========================================================
+    // 相手の名前
+    // =========================================================
 
-	//==================================================
-	// 接続人数
-	//==================================================
+	const char* enemyName = nullptr;
 
-	DrawFormatString(0,30,GetColor(255, 255, 255),"接続人数 : %d / %d",m_PlayerCount,PLAYER_MAX);
-
-
-	//==================================================
-	// 最初の文字
-	//==================================================
-
-	DrawFormatString(0,70,GetColor(0, 255, 255),"最初の文字 : %s",m_StartChar);
-
-	//==================================================
-	// ターン
-	//==================================================
-
-	if (strlen(m_TurnPlayerName) > 0)
+	// 自分が1Pの場合、相手は2P
+	if (strcmp(m_MyName, m_FirstPlayerName) == 0)
 	{
-		DrawFormatString(0,100,GetColor(255, 255, 0),"%sさんの番です",m_TurnPlayerName);
+		enemyName = m_SecondPlayerName;
+	}
+	// 自分が2Pの場合、相手は1P
+	else if (strcmp(m_MyName, m_SecondPlayerName) == 0)
+	{
+		enemyName = m_FirstPlayerName;
+	}
+
+	if (enemyName != nullptr && strlen(enemyName) > 0)
+	{
+		DrawFormatString(60,45,black,"あいて : %s",enemyName);
+	}
+	else
+	{
+		DrawFormatString(60,45,black,"あいて : 待機中");
+	}
+
+	// =========================================================
+	// 自分
+	// =========================================================
+
+	DrawBox(1100, 430,1570, 520,white,TRUE);
+
+	DrawFormatString(1130,455,black,"じぶん : %s",m_MyName);
+
+	// =========================================================
+	// 現在の単語
+	// =========================================================
+
+	if (!m_WordList.empty())
+	{
+		const ShiritoriData& currentData = m_WordList.back();
+
+		int wordWidth =GetDrawStringWidth(currentData.word,-1);
+
+		// 白い楕円
+		DrawOval(screenWidth / 2,320,250,80,white,TRUE);
+
+		// 単語を中央寄せ
+		int wordX = screenWidth / 2 - wordWidth / 2;
+
+		DrawString(wordX,290,currentData.word,black);
+	}
+
+	//==================================================
+	// 次に入力する文字
+	//==================================================
+
+	std::string guideText = "文字は「";
+	guideText += m_StartChar;
+	guideText += "」です";
+
+	int guideWidth =GetDrawStringWidth(guideText.c_str(),-1);
+
+	DrawString(screenWidth / 2 - guideWidth / 2,450,guideText.c_str(),black);
+
+
+	// =========================================================
+	// これまでのことば
+	// =========================================================
+
+	const int historyX = 1250;
+	const int historyY = 80;
+
+	DrawBox(historyX,historyY,1570,380,white,TRUE);
+
+	DrawString(historyX + 25,historyY + 20,"これまでのことば",black);
+
+	int drawY = historyY + 65;
+
+	// 最新の単語から表示
+	for (auto it = m_WordList.rbegin();it != m_WordList.rend();++it)
+	{
+		// ShiritoriDataなので word を表示する
+		DrawString(historyX + 30,drawY,it->word,black);
+
+		drawY += 35;
+
+		// 最大7個程度
+		if (drawY > historyY + 270)
+		{
+			break;
+		}
+	}
+
+	//==================================================
+    // 自分のターンか判定
+    //==================================================
+
+	bool isMyTurn = strcmp(m_TurnPlayerName, m_MyName) == 0;
+
+
+	// =========================================================
+	// 入力エリア
+	// =========================================================
+
+	const int inputX = 50;
+	const int inputY = 700;
+	const int inputWidth = 1100;
+	const int inputHeight = 80;
+
+	DrawBox(inputX,inputY,inputX + inputWidth,inputY + inputHeight,gray,TRUE);
+
+	if (isMyTurn)
+	{
+		// InputStringの位置を変更
+		if (m_MessageInput != nullptr)
+		{
+			m_MessageInput->SetPos(VGet(static_cast<float>(inputX + 20),static_cast<float>(inputY + 20),0.0f));
+
+			m_MessageInput->Draw();
+		}
+	}
+	else
+	{
+		DrawString(inputX + 25,inputY + 25,"相手の入力を待っています...",darkGray);
 	}
 
 
-	//==================================================
-	// 履歴
-	//==================================================
 
-	int y = 150;
+	// =========================================================
+	// ターン表示
+	// =========================================================
 
-
-	for (const ShiritoriData& data :m_WordList)
+	if (isMyTurn)
 	{
-		DrawFormatString(0,y,GetColor(255, 255, 255),"%s : %s",data.name,data.word);
-
-		y += 30;
+		DrawString(50,810,"あなたのターンです",black);
 	}
-
-
-	//==================================================
-	// 結果
-	//==================================================
-
-	if (strlen(m_ResultMessage) > 0)
+	else
 	{
-		DrawFormatString(0,770,GetColor(255, 100, 100),"%s",m_ResultMessage);
+		DrawString(50,810,"相手のターンです",black);
 	}
-
-
-//==================================================
-// 入力エリア
-//==================================================
-
-	DrawFormatString(50,650,GetColor(255, 255, 255),"入力");
-
-	DrawBox(50,730,1000,780,GetColor(50, 50, 50),TRUE);
-
-	DrawBox(50,730,1000,780,GetColor(255, 255, 255),FALSE);
-
-	DrawFormatString(1020,745,GetColor(255, 255, 255),"Enter : 決定");
-
-	DrawFormatString(50,820,GetColor(255, 255, 255),"Escキーで切断");
 }

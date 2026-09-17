@@ -98,27 +98,12 @@ void GameApp::Draw()
 
 		SetFontSize(32);
 
-		DrawString(
-			700,
-			500,
-			"オンラインでプレイ",
-			GetColor(255, 255, 255)
-		);
+		DrawString(700,500,"オンラインでプレイ",GetColor(255, 255, 255));
 
-		DrawString(
-			700,
-			660,
-			"ゲームをやめる",
-			GetColor(255, 255, 255)
-		);
+		DrawString(700,660,"ゲームをやめる",GetColor(255, 255, 255));
 
 		// 選択カーソル
-		DrawString(
-			650,
-			500 + m_SelectIndex * 160,
-			">>",
-			GetColor(255, 255, 255)
-		);
+		DrawString(650,500 + m_SelectIndex * 160,">>",GetColor(255, 255, 255));
 
 		break;
 
@@ -207,10 +192,14 @@ void GameApp::UpdateSelectMode()
 				// IPアドレス設定
 				IPDATA ipData;
 
-				ipData.d1 = 10;
-				ipData.d2 = 0;
-				ipData.d3 = 80;
-				ipData.d4 = 123;
+
+				//-----------------
+				///ここで設定します
+				//-----------------
+				ipData.d1 = 192;
+				ipData.d2 = 168;
+				ipData.d3 = 0;
+				ipData.d4 = 54;
 
 				m_Client->SetIPAddress(ipData);
 			}
